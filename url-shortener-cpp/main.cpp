@@ -1,23 +1,20 @@
 #include <iostream>
-#include "core/urlshortenerservice.h"
+#include "core/UrlShortenerService.h"
 
 int main() {
 
     UrlShortenerService service;
-    // service ka object banaya
 
-    std::string short1 = service.shortenUrl("https://google.com");
-    // pehla URL shorten kiya
+    // Step 1: create URLs
+    std::string google = service.shortenUrl("https://google.com");
+    std::string openai = service.shortenUrl("https://openai.com");
+    std::string github = service.shortenUrl("https://github.com");
 
-    std::cout << "Short code: " << short1 << std::endl;
-    std::cout << "Redirect: "
-              << service.redirect(short1) << std::endl;
-
-    std::string short2 = service.shortenUrl("https://openai.com");
-
-    std::cout << "Short code: " << short2 << std::endl;
-    std::cout << "Redirect: "
-              << service.redirect(short2) << std::endl;
+    // Step 2: simulate heavy redirects
+    for (int i = 0; i < 10; i++) {
+        std::cout << "Redirect Google: "
+                  << service.redirect(google) << std::endl;
+    }
 
     return 0;
 }
