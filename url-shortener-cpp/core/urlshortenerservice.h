@@ -2,7 +2,7 @@
 #define URL_SHORTENER_SERVICE_H
 
 
-
+#include "LRUCache.h"
 #include <string>
 #include "Idgenerator.h"
 #include "urlrespository.h"
@@ -14,11 +14,12 @@ class UrlShortenerService {
 private:
     Idgenerator idgenerator;
     // unique ID generate karega
-
+ LRUCache cache;
     UrlRepository repository;
     // shortCode → longURL store karega
 
 public:
+    UrlShortenerService();
     std::string shortenUrl(const std::string& longUrl);
     // long URL ko short code me convert karega
 

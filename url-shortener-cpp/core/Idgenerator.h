@@ -1,4 +1,4 @@
-#ifndef ID_GENRATOR_H
+#ifndef ID_GENERATOR_H
 #define ID_GENERATOR_H
 
 #include<atomic>
