@@ -5,11 +5,11 @@
  */
 
 const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
+const cors = require('cors');
+const path = require('path');
 
-const app  = express();
-const PORT = 3000;
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -103,8 +103,8 @@ const cache = new LRUCache(100);
 // Rate Limiter (Token Bucket per IP)
 // ─────────────────────────────────────────────
 const buckets = new Map(); // ip → { tokens, lastRefill }
-const MAX_TOKENS   = 10;  // burst
-const REFILL_RATE  = 3;   // tokens per second
+const MAX_TOKENS = 10;  // burst
+const REFILL_RATE = 3;   // tokens per second
 
 function allowRequest(ip) {
   const now = Date.now() / 1000;
