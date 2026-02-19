@@ -1,0 +1,52 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# dotenv
+.env
+.env.*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# build artifacts
+dist/
+build/
+out/
+coverage/
+
+# C/C++ artifacts
+*.o
+*.obj
+*.exe
+*.dll
+*.lib
+*.a
+*.so
+*.dylib
+*.pdb
+*.ilk
+*.log
+*.tmp
+*.cache
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Local data
+*.sqlite
+*.db
+*.bak

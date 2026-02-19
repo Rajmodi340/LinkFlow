@@ -1,41 +1,86 @@
 #include "urlshortenerservice.h"
 #include "Base62Encoder.h"
-
+#include <iostream>
 
 UrlShortenerService::UrlShortenerService()
-    : cache(3)   // cache size = 3 (example)
-{
-}
+    : cache(100),
+      rateLimiter(5.0, 2.0),
+      hashRing(3)
+{}
 
-std::string UrlShortenerService::shortenUrl(const std::string& longUrl) {
+std::string UrlShortenerService::shortenUrl(const std::string& longUrl,
+                                             int ttlSeconds,
+                                             const std::string& ip,
+                                             const std::string& customAlias) {
+    // Rate limiting check
+    if (!ip.empty() && !rateLimiter.allowRequest(ip)) {
+        std::cout << "  ⛔ Rate limit exceeded for IP: " << ip << "\n";
+        return "";
+    }
 
-    // step 1: unique ID lo
-    long long id = idgenerator.getNextId();
+    std::string shortCode;
 
-    // step 2: ID ko Base62 me convert karo
-    std::string shortCode = Base62Encoder::encode(id);
+    if (!customAlias.empty()) {
+        // Custom alias: check it's not already taken
+        if (repository.exists(customAlias)) {
+            std::cout << "  ⚠️  Alias '" << customAlias << "' already in use.\n";
+            return "";
+        }
+        shortCode = customAlias;
+    } else {
+        // Auto-generate: ID → Base62
+        long long id = idgenerator.getNextId();
+        shortCode = Base62Encoder::encode(id);
+    }
 
-    // step 3: mapping save karo
-    repository.save(shortCode, longUrl);
+    // Save to repository (with optional TTL)
+    repository.save(shortCode, longUrl, ttlSeconds);
 
-    // step 4: shortCode return karo
     return shortCode;
 }
 
-std::string UrlShortenerService::redirect(const std::string& shortCode) {
+std::string UrlShortenerService::redirect(const std::string& shortCode,
+                                           const std::string& ip) {
+    // Rate limiting check
+    if (!ip.empty() && !rateLimiter.allowRequest(ip)) {
+        std::cout << "  ⛔ Rate limit exceeded for IP: " << ip << "\n";
+        return "";
+    }
 
     std::string longUrl;
-     if (cache.get(shortCode, longUrl)) {
-        // cache hit
+
+    // 1. Check LRU cache first
+    if (cache.get(shortCode, longUrl)) {
+        // Cache hit
+        analytics.recordHit(shortCode);
         return longUrl;
     }
 
-      longUrl = repository.find(shortCode);
-    // shortCode se longURL fetch karo
-        // step 3: cache me daal do
-    if (!longUrl.empty()) {
-        cache.put(shortCode, longUrl);
+    // 2. Cache miss — fetch from repository
+    longUrl = repository.find(shortCode);
+
+    if (longUrl.empty()) {
+        return ""; // Not found or expired
     }
 
+    // 3. Warm the cache
+    cache.put(shortCode, longUrl);
+
+    // 4. Record analytics
+    analytics.recordHit(shortCode);
+
     return longUrl;
+}
+
+void UrlShortenerService::printAnalytics(int topN) {
+    analytics.printReport(topN);
+}
+
+void UrlShortenerService::printNodeAssignment(const std::string& shortCode) {
+    int node = hashRing.getNode(shortCode);
+    std::cout << "  🔗 '" << shortCode << "' → Node " << node << "\n";
+}
+
+void UrlShortenerService::addNode(int nodeId) {
+    hashRing.addNode(nodeId);
 }

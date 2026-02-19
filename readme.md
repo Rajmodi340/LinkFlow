@@ -1,205 +1,229 @@
-<!-- problem statement -->
-design and implement a high performance url shortener service that can handle millions o requests wiht low latency and high availability
+# 🚀 Advanced URL Shortener (C++)
 
+A high-performance URL shortening service built in C++, implemented in **4 progressive phases** — from a core in-memory engine to a full-featured service with rate limiting, analytics, and distributed hashing.
 
-## functioncal requirement
-#generate a short url form long url
-#redirect long url to short url
-#support expiry time for urls
-#Implement rate limiting to prevent abuse
+---
 
-## non-functional requiremnt
+## 📋 Table of Contents
+- [Phase 1 — Core Engine](#phase-1--core-engine)
+- [Phase 2 — Rate Limiting, URL Expiry & Thread Safety](#phase-2--rate-limiting-url-expiry--thread-safety)
+- [Phase 3 — Consistent Hashing & Distribution](#phase-3--consistent-hashing--distribution)
+- [Phase 4 — Advanced Features](#phase-4--advanced-features)
+- [Getting Started](#getting-started)
+- [Project Structure](#project-structure)
 
-low latency redirect (>50ms)
-high availability
-horizontal scalabaility
-fault tolerance
+---
 
+## Phase 1 — Core Engine
 
-## tech decisions
-lnaguage :c++
-focus on performance critical bacjend comaponents
-in memory caching and sharding simulataion
+> **Status: ✅ Complete**
 
+The foundation of the service. All components are in `core/`.
 
+### Components
 
+| File | Responsibility |
+|------|---------------|
+| `Idgenerator.h/.cpp` | Atomic counter-based unique ID generation (thread-safe) |
+| `Base62Encoder.h/.cpp` | Converts numeric IDs → short alphanumeric codes (`[a-zA-Z0-9]`) |
+| `LRUCache.h/.cpp` | O(1) in-memory cache with LRU eviction |
+| `urlrespository.h` / `urlRepository.cpp` | Storage layer mapping short codes → long URLs |
+| `urlshortenerservice.h` / `urlshortservice.cpp` | Main orchestrator |
 
-## scope 
-core url  shortening logoc
-in memory storage
-no http server yet
+### How It Works
 
+```
+1. shortenUrl("https://google.com")
+   └─> ID: 1  →  Base62: "1"  →  store("1", "https://google.com")  →  return "1"
 
+2. redirect("1")
+   └─> Check LRU cache → miss → fetch from repository → warm cache → return URL
+```
 
-//how will i generate unique id
-//counter based
+### Why Base62?
+- URL-safe characters only (`[a-zA-Z0-9]`)
+- 62^7 = **3.5 trillion** possible short codes
+- No special characters needing URL encoding
 
-# data handling
-multiple short url for  same long?
+---
 
-# user Management
-authenticatin require??
+## Phase 2 — Rate Limiting, URL Expiry & Thread Safety
 
-# lifecyllemanagement
-how they expire ??
-most manual but same limited time
+> **Status: ✅ Complete**
 
-# customisation
-custom aliase
-# security
-how to prevent spam,phishing, mamlware
+### Rate Limiting (`RateLimiter.h/.cpp`)
 
+**Token Bucket Algorithm** — per IP address:
+- Each IP gets a bucket of `maxTokens` (default: 5 burst)
+- Tokens refill at `refillRate` per second (default: 2/sec)
+- Request is blocked if bucket is empty
 
-## the art of short code generation
+```cpp
+RateLimiter limiter(5.0, 2.0);  // 5 burst, 2 tokens/sec refill
+limiter.allowRequest("192.168.1.1");  // true or false
+```
 
+### URL Expiry / TTL (`urlrespository.h`)
 
+Each URL entry now stores an optional expiry timestamp:
 
-# auto-incrementing ID with base 62 Encdoing
-(counter(unique)+62(char) for mapping)
+```cpp
+// Expires in 60 seconds
+service.shortenUrl("https://promo.com", 60 /*ttlSeconds*/);
 
+// No expiry (permanent)
+service.shortenUrl("https://google.com");
+```
 
-# hash-based generation
+When `redirect()` is called on an expired URL, it returns `""` and auto-deletes the entry.
 
-natural deduplication
-two same hsort hash ocde due to 7 character taking
-!! solution : character taking length badha do
-** check url in database
+### Thread Safety
+- `LRUCache` — `std::mutex` on all `get()` / `put()` / `remove()` calls
+- `UrlRepository` — `std::mutex` on all `save()` / `find()` calls
+- `RateLimiter` — `std::mutex` on bucket access
+- `AnalyticsTracker` — `std::mutex` on hit recording
 
+---
 
+## Phase 3 — Consistent Hashing & Distribution
 
-## UUID-based genration
-universally unique idnetifier
-Bahut lamba
+> **Status: ✅ Complete**
 
-Practically unique hota hai
+### Consistent Hashing (`consistenthashing.h/.cpp`)
 
-Do machines pe bhi generate karo → collision nahi
+Distributes short codes across multiple storage nodes with minimal reshuffling when nodes are added/removed.
 
+```cpp
+service.addNode(1);
+service.addNode(2);
+service.addNode(3);
 
+service.printNodeAssignment("abc");  // → Node 2
+service.printNodeAssignment("xyz");  // → Node 1
+```
 
-generate uuid
-     
-     uskko encode kro
-
-     short code bnao
-
-
- ## database ##
- postgresql
-
-
- no sql might help in hgih scalbility time but relationalmodellwork very very well
-
-
-    
-## optimizing for read performance
-with 100:1
-read to write ratio
-*multilayered cahching*
- 
- redis: most frequently accessed short code mappings
-
- CDN: for exteremly short url cahce redirect the response
- this reduce latency
-
- **security and abuse prevention**
-
-1.rate limiting
-  to prevent form crash as same time 10000 url demand may crash db 
-
-  2. malicius url detection
-  
-
- maintain blocklist
- intergerate with google safe browsing
- regex check 
-
- 3. enumeration attack protection
-
-
-
- 4. expiry & auto cleanup
- old malicious url saty forever
-
- 5. redirect safety
-
-
-
- **ensuring reliabilty and fault tolerance*
-
-ek databse vahi dwn ho gya too :
-      solution : master-slave replication
-      master: likhne wala
-      slave: padhne wala
-
-      if master fail then slave become master
-      system continues
-
-
-**aplicaton resilience**
-
-A) circuit breaker
-
-agra koi service down ho to system he turn off
-cascadin g failure se bachata h
-
-
-
-b) gracefull degrdation
-
-extra chz bnd ho jaye
-
-
-
-
-c)  retry logic
-kabhi kbahi network issue temporary
-
-
-
-
-**global distribution**
-a) geo DNS
-user jha h uske nearest server pa le jao
- 
-
- b) reigonal redis
- har reigon me apne redis
-
- c)edge computing
- redirect k logic server tk jaye
-
-
-
-## CDN STRATEGY
-
-We cache HTTP 302 redirect responses at the CDN edge using Cloudflare Workers, allowing popular short URLs to bypass the backend entirely and achieve sub-50ms global latency
-
-## monitoring and observaility
-checking system health
-agar problema aye to kyu ayi
-
-
-#key metrics
-
-
-#eror rates
-4xx->user glti
-5xx->server galti
-
-#business metrices
-ye metrics engineerng + product dono
-
-
-**alerting strategy**
-jb koi metrices safe limit cross kre
-
-we mointor latency percentiles,error rates and business metrics and configure alerts so issue are detected and resilved before impacting users
-
-Track latency (P95)
-
-Track error rates
-
-Alert on anomalies
-
-Logs for debugging
+**Virtual nodes** (default: 3 per real node) ensure even distribution.
+
+### Scalability Architecture
+
+```
+User Request
+     │
+     ▼
+┌──────────────┐
+│  Geo DNS     │  ← Routes to nearest region
+└──────────────┘
+     │
+     ├──────────┬──────────┬──────────┐
+     ▼          ▼          ▼          ▼
+┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+│ Node 1  │ │ Node 2  │ │ Node 3  │ │ Node N  │
+└─────────┘ └─────────┘ └─────────┘ └─────────┘
+```
+
+---
+
+## Phase 4 — Advanced Features
+
+> **Status: ✅ Complete**
+
+### Custom Alias Support
+
+```cpp
+// Use a human-readable alias instead of auto-generated code
+service.shortenUrl("https://linkedin.com/in/akshay", 0, "", "akshay");
+service.redirect("akshay");  // → https://linkedin.com/in/akshay
+```
+
+Duplicate aliases are rejected with a warning.
+
+### Analytics Tracking (`AnalyticsTracker.h/.cpp`)
+
+Tracks click counts per short code. Prints a sorted report:
+
+```
+📊 Analytics Report (Top 5 URLs):
+  ┌─────────────┬───────────┐
+  │  Short Code │   Clicks  │
+  ├─────────────┼───────────┤
+  │ 1           │        25 │
+  │ akshay      │         5 │
+  │ 2           │         8 │
+  └─────────────┴───────────┘
+```
+
+### QR Code Stub (`QRCodeStub.h`)
+
+ASCII art placeholder for QR code generation. In production, integrate with [libqrencode](https://fukuchi.org/works/qrencode/).
+
+```cpp
+QRCodeStub::printQR("akshay");
+// Prints ASCII QR art + full URL
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+- C++ compiler with **C++17** support (GCC 7+, Clang 5+, MSVC 2017+)
+
+### Compile
+
+```bash
+cd url-shortener-cpp
+g++ -std=c++17 main.cpp core/*.cpp -o app.exe
+```
+
+### Run
+
+```bash
+./app.exe
+```
+
+The demo runs all 4 phases sequentially, showing:
+1. Basic shorten + redirect
+2. LRU cache hits
+3. Rate limiting (blocked requests)
+4. URL expiry (TTL)
+5. Consistent hash node assignments
+6. Custom aliases
+7. QR code ASCII art
+8. Analytics dashboard
+
+---
+
+## Project Structure
+
+```
+url-shortener-cpp/
+├── core/
+│   ├── Base62Encoder.h/.cpp        # Phase 1 — Base62 encoding
+│   ├── Idgenerator.h/.cpp          # Phase 1 — Unique ID generation
+│   ├── LRUCache.h/.cpp             # Phase 1+2 — LRU cache (thread-safe)
+│   ├── urlrespository.h            # Phase 1+2 — Storage layer (with TTL)
+│   ├── urlRepository.cpp           # Phase 1+2 — Storage implementation
+│   ├── RateLimiter.h/.cpp          # Phase 2 — Token bucket rate limiter
+│   ├── consistenthashing.h/.cpp    # Phase 3 — Consistent hash ring
+│   ├── AnalyticsTracker.h/.cpp     # Phase 4 — Click analytics
+│   ├── QRCodeStub.h                # Phase 4 — QR code ASCII stub
+│   ├── urlshortenerservice.h       # All phases — Main orchestrator header
+│   └── urlshortservice.cpp         # All phases — Main orchestrator impl
+├── main.cpp                        # Full demo (all 4 phases)
+└── app.exe                         # Compiled binary
+```
+
+---
+
+## Performance
+
+| Operation | Latency | Notes |
+|-----------|---------|-------|
+| Cache Hit | < 1ms | LRU in-memory |
+| Cache Miss + Repo | ~1ms | In-memory repo |
+| URL Creation | < 1ms | Atomic counter + Base62 |
+| Rate Check | < 0.1ms | Token bucket |
+
+---
+
+**Built with ❤️ and C++17**

@@ -1,44 +1,35 @@
 #ifndef LRU_CACHE_H
 #define LRU_CACHE_H
 
-#include<unordered_map>
-#include<list>
-#include<string>
-
-//namespace islea nhi le rhae kyuki koi humare header file importa krega to garbage vlaue bhi a skte h
-
-
-// lru - fast lookup 
-// limited size_t
-// recently used 
-
+#include <unordered_map>
+#include <list>
+#include <string>
+#include <mutex>
 
 class LRUCache {
-    private : int capacity;
-    std :: list<std ::string>order;
-
-
-        std::unordered_map<
+private:
+    int capacity;
+    std::list<std::string> order;
+    std::unordered_map<
         std::string,
         std::pair<std::string, std::list<std::string>::iterator>
     > cache;
+    mutable std::mutex mtx;
 
+public:
+    LRUCache(int cap);
 
-    // map k structure:
-// 
+    // Returns true and fills value if key found; false otherwise
+    bool get(const std::string& key, std::string& value);
 
+    // Insert or update key-value pair; evicts LRU if at capacity
+    void put(const std::string& key, const std::string& value);
 
+    // Remove a key (used when URL expires)
+    void remove(const std::string& key);
 
-
-public: 
-   LRUCache(int cap);
-
-   bool get(const std :: string& key ,std :: string& value);
-   //agar key cache me hai
-   //value fill krenge aur true return krenge
-
-   void put( const std :: string& key, const std:: string& value);
+    // Current number of cached entries
+    int size() const;
 };
-
 
 #endif
