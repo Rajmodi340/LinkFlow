@@ -5,14 +5,16 @@
 #include "core/QRCodeStub.h"
 
 // Helper: print a section header
-void section(const std::string& title) {
+void section(const std::string &title)
+{
     std::cout << "\n";
     std::cout << "══════════════════════════════════════════════\n";
     std::cout << "  " << title << "\n";
     std::cout << "══════════════════════════════════════════════\n";
 }
 
-int main() {
+int main()
+{
     UrlShortenerService service;
 
     // ─────────────────────────────────────────────
@@ -36,7 +38,8 @@ int main() {
     // ─────────────────────────────────────────────
     section("PHASE 1 — LRU Cache (10 rapid redirects)");
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 10; i++)
+    {
         std::string result = service.redirect(google);
         std::cout << "  Hit #" << (i + 1) << " → " << result << "\n";
     }
@@ -50,11 +53,15 @@ int main() {
     std::string testUrl = service.shortenUrl("https://example.com");
 
     std::cout << "  Sending 7 requests from IP: " << myIp << "\n\n";
-    for (int i = 1; i <= 7; i++) {
+    for (int i = 1; i <= 7; i++)
+    {
         std::string result = service.redirect(testUrl, myIp);
-        if (!result.empty()) {
+        if (!result.empty())
+        {
             std::cout << "  Request #" << i << " ✅ → " << result << "\n";
-        } else {
+        }
+        else
+        {
             std::cout << "  Request #" << i << " ❌ BLOCKED by rate limiter\n";
         }
     }
@@ -96,22 +103,22 @@ int main() {
     // ─────────────────────────────────────────────
     section("PHASE 4 — Custom Alias Support");
 
-    std::string alias1 = service.shortenUrl("https://linkedin.com/in/akshay", 0, "", "akshay");
+    std::string alias1 = service.shortenUrl("https://example.com/profile", 0, "", "custom-alias");
     std::string alias2 = service.shortenUrl("https://myportfolio.dev", 0, "", "portfolio");
     // Try duplicate alias
-    std::string alias3 = service.shortenUrl("https://other.com", 0, "", "akshay");
+    std::string alias3 = service.shortenUrl("https://other.com", 0, "", "custom-alias");
 
-    std::cout << "  ✅ Custom alias 'akshay'    → " << service.redirect("akshay") << "\n";
+    std::cout << "  ✅ Custom alias 'custom-alias'    → " << service.redirect("custom-alias") << "\n";
     std::cout << "  ✅ Custom alias 'portfolio' → " << service.redirect("portfolio") << "\n";
-    std::cout << "  ↳ Duplicate 'akshay' result: " << (alias3.empty() ? "blocked (alias taken)" : alias3) << "\n";
+    std::cout << "  ↳ Duplicate 'custom-alias' result: " << (alias3.empty() ? "blocked (alias taken)" : alias3) << "\n";
 
     // ─────────────────────────────────────────────
     // PHASE 4: QR Code Generation (ASCII stub)
     // ─────────────────────────────────────────────
     section("PHASE 4 — QR Code (ASCII Stub)");
 
-    std::cout << "  QR for 'akshay':\n";
-    QRCodeStub::printQR("akshay");
+    std::cout << "  QR for 'custom-alias':\n";
+    QRCodeStub::printQR("custom-alias");
     std::cout << "  QR for '" << google << "':\n";
     QRCodeStub::printQR(google);
 
@@ -121,11 +128,16 @@ int main() {
     section("PHASE 4 — Analytics Dashboard");
 
     // Generate some traffic
-    for (int i = 0; i < 15; i++) service.redirect(google);
-    for (int i = 0; i < 8;  i++) service.redirect(github);
-    for (int i = 0; i < 3;  i++) service.redirect(openai);
-    for (int i = 0; i < 5;  i++) service.redirect("akshay");
-    for (int i = 0; i < 2;  i++) service.redirect("portfolio");
+    for (int i = 0; i < 15; i++)
+        service.redirect(google);
+    for (int i = 0; i < 8; i++)
+        service.redirect(github);
+    for (int i = 0; i < 3; i++)
+        service.redirect(openai);
+    for (int i = 0; i < 5; i++)
+        service.redirect("custom-alias");
+    for (int i = 0; i < 2; i++)
+        service.redirect("portfolio");
 
     service.printAnalytics(5);
 

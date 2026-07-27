@@ -5,6 +5,7 @@ A high-performance URL shortening service built in C++, implemented in **4 progr
 ---
 
 ## 📋 Table of Contents
+
 - [Phase 1 — Core Engine](#phase-1--core-engine)
 - [Phase 2 — Rate Limiting, URL Expiry & Thread Safety](#phase-2--rate-limiting-url-expiry--thread-safety)
 - [Phase 3 — Consistent Hashing & Distribution](#phase-3--consistent-hashing--distribution)
@@ -22,13 +23,13 @@ The foundation of the service. All components are in `core/`.
 
 ### Components
 
-| File | Responsibility |
-|------|---------------|
-| `Idgenerator.h/.cpp` | Atomic counter-based unique ID generation (thread-safe) |
-| `Base62Encoder.h/.cpp` | Converts numeric IDs → short alphanumeric codes (`[a-zA-Z0-9]`) |
-| `LRUCache.h/.cpp` | O(1) in-memory cache with LRU eviction |
-| `urlrespository.h` / `urlRepository.cpp` | Storage layer mapping short codes → long URLs |
-| `urlshortenerservice.h` / `urlshortservice.cpp` | Main orchestrator |
+| File                                            | Responsibility                                                  |
+| ----------------------------------------------- | --------------------------------------------------------------- |
+| `Idgenerator.h/.cpp`                            | Atomic counter-based unique ID generation (thread-safe)         |
+| `Base62Encoder.h/.cpp`                          | Converts numeric IDs → short alphanumeric codes (`[a-zA-Z0-9]`) |
+| `LRUCache.h/.cpp`                               | O(1) in-memory cache with LRU eviction                          |
+| `urlrespository.h` / `urlRepository.cpp`        | Storage layer mapping short codes → long URLs                   |
+| `urlshortenerservice.h` / `urlshortservice.cpp` | Main orchestrator                                               |
 
 ### How It Works
 
@@ -41,6 +42,7 @@ The foundation of the service. All components are in `core/`.
 ```
 
 ### Why Base62?
+
 - URL-safe characters only (`[a-zA-Z0-9]`)
 - 62^7 = **3.5 trillion** possible short codes
 - No special characters needing URL encoding
@@ -54,6 +56,7 @@ The foundation of the service. All components are in `core/`.
 ### Rate Limiting (`RateLimiter.h/.cpp`)
 
 **Token Bucket Algorithm** — per IP address:
+
 - Each IP gets a bucket of `maxTokens` (default: 5 burst)
 - Tokens refill at `refillRate` per second (default: 2/sec)
 - Request is blocked if bucket is empty
@@ -78,6 +81,7 @@ service.shortenUrl("https://google.com");
 When `redirect()` is called on an expired URL, it returns `""` and auto-deletes the entry.
 
 ### Thread Safety
+
 - `LRUCache` — `std::mutex` on all `get()` / `put()` / `remove()` calls
 - `UrlRepository` — `std::mutex` on all `save()` / `find()` calls
 - `RateLimiter` — `std::mutex` on bucket access
@@ -131,8 +135,8 @@ User Request
 
 ```cpp
 // Use a human-readable alias instead of auto-generated code
-service.shortenUrl("https://linkedin.com/in/akshay", 0, "", "akshay");
-service.redirect("akshay");  // → https://linkedin.com/in/akshay
+service.shortenUrl("https://example.com/profile", 0, "", "custom-alias");
+service.redirect("custom-alias");  // → https://example.com/profile
 ```
 
 Duplicate aliases are rejected with a warning.
@@ -147,7 +151,7 @@ Tracks click counts per short code. Prints a sorted report:
   │  Short Code │   Clicks  │
   ├─────────────┼───────────┤
   │ 1           │        25 │
-  │ akshay      │         5 │
+  │ custom-alias │         5 │
   │ 2           │         8 │
   └─────────────┴───────────┘
 ```
@@ -157,7 +161,7 @@ Tracks click counts per short code. Prints a sorted report:
 ASCII art placeholder for QR code generation. In production, integrate with [libqrencode](https://fukuchi.org/works/qrencode/).
 
 ```cpp
-QRCodeStub::printQR("akshay");
+QRCodeStub::printQR("custom-alias");
 // Prints ASCII QR art + full URL
 ```
 
@@ -166,6 +170,7 @@ QRCodeStub::printQR("akshay");
 ## Getting Started
 
 ### Prerequisites
+
 - C++ compiler with **C++17** support (GCC 7+, Clang 5+, MSVC 2017+)
 
 ### Compile
@@ -182,6 +187,7 @@ g++ -std=c++17 main.cpp core/*.cpp -o app.exe
 ```
 
 The demo runs all 4 phases sequentially, showing:
+
 1. Basic shorten + redirect
 2. LRU cache hits
 3. Rate limiting (blocked requests)
@@ -217,12 +223,12 @@ url-shortener-cpp/
 
 ## Performance
 
-| Operation | Latency | Notes |
-|-----------|---------|-------|
-| Cache Hit | < 1ms | LRU in-memory |
-| Cache Miss + Repo | ~1ms | In-memory repo |
-| URL Creation | < 1ms | Atomic counter + Base62 |
-| Rate Check | < 0.1ms | Token bucket |
+| Operation         | Latency | Notes                   |
+| ----------------- | ------- | ----------------------- |
+| Cache Hit         | < 1ms   | LRU in-memory           |
+| Cache Miss + Repo | ~1ms    | In-memory repo          |
+| URL Creation      | < 1ms   | Atomic counter + Base62 |
+| Rate Check        | < 0.1ms | Token bucket            |
 
 ---
 
